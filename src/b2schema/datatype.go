@@ -1,4 +1,4 @@
-package schema
+package b2schema
 
 import "errors"
 
@@ -19,6 +19,7 @@ type DataType struct {
 	TypeName string // 数据类型名称
 }
 
+// 一些数据类型结构体定义，使用时应作为常量处理
 var (
 	// B2Int32 int32结构体
 	B2Int32 = DataType{Dtype: DtInt32, TypeName: "int32"}
