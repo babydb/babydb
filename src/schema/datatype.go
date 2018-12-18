@@ -1,5 +1,7 @@
 package schema
 
+import "errors"
+
 // 数据类型枚举
 const (
 	DtInt32     = iota // int32 -> 0, and so on.
@@ -33,3 +35,47 @@ var (
 	// B2Timestamp time结构体
 	B2Timestamp = DataType{Dtype: DtTimestamp, TypeName: "timestamp"}
 )
+
+// NameAsType 通过类型名称获取类型结构体
+func NameAsType(typeName string) (*DataType, error) {
+	switch typeName {
+	case B2Int32.TypeName:
+		return &B2Int32, nil
+	case B2Int64.TypeName:
+		return &B2Int64, nil
+	case B2Float32.TypeName:
+		return &B2Float32, nil
+	case B2Float64.TypeName:
+		return &B2Float64, nil
+	case B2String.TypeName:
+		return &B2String, nil
+	case B2Bytes.TypeName:
+		return &B2Bytes, nil
+	case B2Timestamp.TypeName:
+		return &B2Timestamp, nil
+	default:
+		return nil, errors.New("no such type name")
+	}
+}
+
+// DtAsType 通过类型枚举值获取类型结构体
+func DtAsType(dataType int) (*DataType, error) {
+	switch dataType {
+	case B2Int32.Dtype:
+		return &B2Int32, nil
+	case B2Int64.Dtype:
+		return &B2Int64, nil
+	case B2Float32.Dtype:
+		return &B2Float32, nil
+	case B2Float64.Dtype:
+		return &B2Float64, nil
+	case B2String.Dtype:
+		return &B2String, nil
+	case B2Bytes.Dtype:
+		return &B2Bytes, nil
+	case B2Timestamp.Dtype:
+		return &B2Timestamp, nil
+	default:
+		return nil, errors.New("no such data type")
+	}
+}
