@@ -14,7 +14,7 @@ const (
 	METADB = "B2META"
 )
 
-// MetaDBSource 数据库连接结构体
+// MetaDBSource 元数据库连接结构体
 type MetaDBSource struct {
 	rocksDB  *rdb.DB
 	OpenTime time.Time
@@ -69,5 +69,18 @@ func (c *MetaDBSource) PutDatabase(dbname string, dbstruct *B2Database) error {
 		log.Fatalf("将数据库META写入rocksdb时发生错误: %v\n", err)
 		return err
 	}
+	c.SyncTime = time.Now()
+	return nil
+}
+
+// DelDatabase 在元数据库中删除数据库
+func (c *MetaDBSource) DelDatabase(dbname string) error {
+	opts := rdb.NewDefaultWriteOptions()
+	opts.SetSync(true)
+	if err := c.rocksDB.Delete(opts, []byte(dbname)); err != nil {
+		log.Fatalf("删除数据库时发生错误: %v\n", err)
+		return err
+	}
+	c.SyncTime = time.Now()
 	return nil
 }

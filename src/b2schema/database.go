@@ -48,6 +48,7 @@ func NewDatabase(name string, meta *MetaDBSource) (*B2Database, error) {
 		log.Fatalf("创建数据库时发生错误: %v\n", err)
 		return nil, err
 	}
+	// TODO: up broadcast meta data to global index
 	return db, nil
 }
 
