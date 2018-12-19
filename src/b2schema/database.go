@@ -6,10 +6,10 @@ import (
 
 // B2Database babydb数据库结构体
 type B2Database struct {
-	Database    string
-	TableList   []string
-	DatabaseID  string
-	RocksDbConn rdb.DB
+	Database    string   `json:"Database"`
+	TableList   []string `json:"TableList,omitempty"`
+	DatabaseID  string   `json:"DatabaseID"`
+	RocksDbConn rdb.DB   `json:"-"`
 }
 
 func NewDatabase(name string, tables []string) (*B2Database, error) {

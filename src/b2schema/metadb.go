@@ -18,14 +18,14 @@ func OpenMetaConn() *rdb.DB {
 	opts.SetCreateIfMissing(true)
 	meta, err := rdb.OpenDb(opts, METADB)
 	if err != nil {
-		log.Panic("无法打开Meta元数据库连接，此服务器已经存在严重错误，服务即将退出: %v\n", err)
+		log.Panicf("无法打开Meta元数据库连接，此服务器已经存在严重错误，服务即将退出: %v\n", err)
 	}
 	return meta
 }
 
 // GetDatabase 在元数据中查找某个名称的数据库
 func GetDatabase(dbname string, meta *rdb.DB) (*B2Database, error) {
-	opts = rdb.NewDefaultReadOptions()
+	opts := rdb.NewDefaultReadOptions()
 	slice, err := meta.Get(opts, []byte(dbname))
 	if err != nil {
 		log.Printf("找不到名称为 %s 的数据库: %v\n", dbname, err)
