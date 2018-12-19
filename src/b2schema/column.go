@@ -15,7 +15,7 @@ type B2Column struct {
 	// DataLength 字段长度
 	DataLength int `json:"DataLength,omitempty"`
 	// Indexing 是否为索引字段
-	Indexing bool `json:"Indexing,omitempty`
+	Indexing bool `json:"Indexing,omitempty"`
 	// ColumnID 字段全局唯一ID
 	ColumnID string `json:"ColumnID"`
 	// IndexID 索引全局唯一ID
@@ -30,7 +30,7 @@ func (col *B2Column) ParseMap(value []byte) (map[string]interface{}, error) {
 		return nil, err
 	}
 	out := make(map[string]interface{})
-	switch t {
+	switch t.Dtype {
 	case DtInt32:
 		// 是否需要检查字节数组长度？
 		out[col.ColumnName] = bytesToInt32(value)
@@ -108,15 +108,15 @@ func (col *B2Column) ParseFloat64(value []byte) (float64, bool) {
 
 // ParseString 将一个字节数组值按照字段定义转换为string
 func (col *B2Column) ParseString(value []byte) (string, bool) {
-	if NameAsType(col.DataType) == "string" && len(value) <= col.DataLength {
+	if col.DataType == "string" && len(value) <= col.DataLength {
 		return string(value), true
 	}
-	return nil, false
+	return "", false
 }
 
 func int32ToBytes(i int32) []byte {
-	bs := make([4]byte)
-	binary.LittleEndian.PutUint32(bs, i)
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, uint32(i))
 	return bs
 }
 
@@ -125,8 +125,8 @@ func bytesToInt32(bs []byte) int32 {
 }
 
 func int64ToBytes(i int64) []byte {
-	bs := make([8]byte)
-	binary.LittleEndian.PutUint64(bs, i)
+	bs := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bs, uint64(i))
 	return bs
 }
 
@@ -135,7 +135,7 @@ func bytesToInt64(bs []byte) int64 {
 }
 
 func float32ToBytes(f float32) []byte {
-	bs := make([4]byte)
+	bs := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bs, math.Float32bits(f))
 	return bs
 }
@@ -145,7 +145,7 @@ func bytesToFloat32(bs []byte) float32 {
 }
 
 func float64ToBytes(f float64) []byte {
-	bs := make([4]byte)
+	bs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bs, math.Float64bits(f))
 	return bs
 }
