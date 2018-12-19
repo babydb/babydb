@@ -85,3 +85,25 @@ func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	b2db.OpenTime = &nt
 	return b2db, nil
 }
+
+// DropDatabase 删除数据库
+func DropDatabase(name string, meta *MetaDBSource) error {
+	meta.Mu.Lock()
+	defer meta.Mu.Unlock()
+	b2db, err := meta.GetDatabase(name)
+	if err != nil {
+		log.Fatalf("找不到要删除的数据库: %s\n", name)
+		return err
+	}
+	b2db.RocksDbConn.Close()
+	opts := rdb.NewDefaultOptions()
+	if err = rdb.DestroyDb(b2db.DatabaseID, opts); err != nil {
+		log.Fatalf("删除数据库文件时发生错误: %v\n", err)
+		return err
+	}
+	if err = meta.DelDatabase(name); err != nil {
+		log.Fatalf("删除数据库META记录时发生错误，数据一致性可能已经破坏: %v\n", err)
+		return err
+	}
+	return nil
+}
