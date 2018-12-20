@@ -2,6 +2,7 @@ package b2schema
 
 import (
 	"encoding/binary"
+	"errors"
 	"log"
 	"math"
 )
@@ -20,6 +21,38 @@ type B2Column struct {
 	ColumnID string `json:"ColumnID"`
 	// IndexID 索引全局唯一ID
 	IndexID string `json:"IndexID"`
+}
+
+// FormatBytes 将一个值按照字段数据类型定义转换为一个字节数组值
+func (col *B2Column) FormatBytes(value interface{}) ([]byte, error) {
+	t, err := NameAsType(col.DataType)
+	if err != nil {
+		log.Fatalf("字段 %s 数据类型定义 %s 有错误: %v\n", col.ColumnName, col.DataType, err)
+		return nil, err
+	}
+	if v, ok := value.(int32); t.Dtype == DtInt32 && ok {
+		return int32ToBytes(v), nil
+	}
+	if v, ok := value.(int64); t.Dtype == DtInt64 && ok {
+		return int64ToBytes(v), nil
+	}
+	if v, ok := value.(float32); t.Dtype == DtFloat32 && ok {
+		return float32ToBytes(v), nil
+	}
+	if v, ok := value.(float64); t.Dtype == DtFloat64 && ok {
+		return float64ToBytes(v), nil
+	}
+	if v, ok := value.(string); t.Dtype == DtString && ok {
+		return []byte(v), nil
+	}
+	if v, ok := value.([]byte); t.Dtype == DtBytes && ok {
+		return v, nil
+	}
+	if v, ok := value.(int64); t.Dtype == DtBytes && ok {
+		return int64ToBytes(v), nil
+	}
+	log.Printf("值 %v 与字段数据类型 %s 定义不相符，无法转换\n", value, col.DataType)
+	return nil, errors.New("value and column data type mismatched")
 }
 
 // ParseMap 将一个字节数组值按照字段定义转换为一个map
@@ -113,6 +146,8 @@ func (col *B2Column) ParseString(value []byte) (string, bool) {
 	}
 	return "", false
 }
+
+// 下面是一些二进制转换工具函数
 
 func int32ToBytes(i int32) []byte {
 	bs := make([]byte, 4)

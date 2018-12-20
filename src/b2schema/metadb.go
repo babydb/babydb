@@ -16,7 +16,7 @@ const (
 
 // MetaDBSource 元数据库连接结构体
 type MetaDBSource struct {
-	rocksDB  *rdb.DB
+	rocksDB  *rdb.TransactionDB
 	OpenTime time.Time
 	SyncTime time.Time
 	Mu       *sync.Mutex
@@ -25,8 +25,9 @@ type MetaDBSource struct {
 // OpenMetaConn 打开元数据库连接，主程序应该保存这个连接
 func OpenMetaConn() *MetaDBSource {
 	opts := rdb.NewDefaultOptions()
+	topts := rdb.NewDefaultTransactionDBOptions()
 	opts.SetCreateIfMissing(true)
-	meta, err := rdb.OpenDb(opts, METADB)
+	meta, err := rdb.OpenTransactionDb(opts, topts, METADB)
 	if err != nil {
 		log.Panicf("无法打开Meta元数据库连接，此服务器已经存在严重错误，服务即将退出: %v\n", err)
 	}
@@ -57,15 +58,15 @@ func (c *MetaDBSource) GetDatabase(dbname string) (*B2Database, error) {
 }
 
 // PutDatabase 将某个数据库PUT更新到元数据中
-func (c *MetaDBSource) PutDatabase(dbname string, dbstruct *B2Database) error {
+func (c *MetaDBSource) PutDatabase(d2db *B2Database) error {
 	opts := rdb.NewDefaultWriteOptions()
 	opts.SetSync(true)
-	dbContent, err := json.Marshal(dbstruct)
+	dbContent, err := json.Marshal(d2db)
 	if err != nil {
 		log.Fatalf("数据库META转换为JSON时发生错误: %v\n", err)
 		return err
 	}
-	if err = c.rocksDB.Put(opts, []byte(dbname), dbContent); err != nil {
+	if err = c.rocksDB.Put(opts, []byte(d2db.Database), dbContent); err != nil {
 		log.Fatalf("将数据库META写入rocksdb时发生错误: %v\n", err)
 		return err
 	}
@@ -82,5 +83,36 @@ func (c *MetaDBSource) DelDatabase(dbname string) error {
 		return err
 	}
 	c.SyncTime = time.Now()
+	return nil
+}
+
+func (c *MetaDBSource) getTable(dbname, tableName string) (*B2Table, error) {
+	opts := rdb.NewDefaultReadOptions()
+	slice, err := c.rocksDB.Get(opts, []byte(dbname+"/"+tableName))
+	if err != nil {
+		log.Printf("找不到数据库 %s 中的表 %s: %v\n", dbname, tableName, err)
+		return nil, err
+	}
+	var table B2Table
+	if err = json.Unmarshal(slice.Data(), &table); err != nil {
+		log.Printf("数据库表元数据结构有错误: %v\n", err)
+		return nil, err
+	}
+	return &table, nil
+}
+
+func (c *MetaDBSource) putTable(dbname string, table *B2Table) error {
+	opts := rdb.NewDefaultWriteOptions()
+	opts.SetSync(true)
+	tableContent, err := json.Marshal(table)
+	if err != nil {
+		log.Fatalf("将数据库表 %s 的META转换为JSON时发生错误: %v\n", table.TableName, err)
+		return err
+	}
+	key := []byte(dbname + "/" + table.TableName)
+	if err = c.rocksDB.Put(opts, key, tableContent); err != nil {
+		log.Fatalf("将数据库表 %s META写入rocksdb时发生错误: %v", table.TableName, err)
+		return err
+	}
 	return nil
 }

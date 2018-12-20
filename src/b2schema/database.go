@@ -1,10 +1,12 @@
 package b2schema
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
 
+	"github.com/rs/xid"
 	rdb "github.com/tecbot/gorocksdb"
 )
 
@@ -13,11 +15,13 @@ type B2Database struct {
 	// 数据库名称
 	Database string `json:"Database"`
 	// 数据库表列表
-	TableList []string `json:"TableList,omitempty"`
+	TableList []*B2Table `json:"TableList,omitempty"`
 	// 数据库全局唯一ID，用于作为在rocksdb中的真实数据库ID
 	DatabaseID string `json:"DatabaseID"`
-	// rocksdb连接结构体
-	RocksDbConn *rdb.DB `json:"-"`
+	// rocksdb只读连接结构体
+	RocksDbReadConn *rdb.DB `json:"-"`
+	// rocksdb事务连接结构体
+	RocksDbWriteConn *rdb.TransactionDB `json:"-"`
 	// 创建时间
 	CreateTime *time.Time `json:"CreateTime,omitempty"`
 	// 打开时间
@@ -36,15 +40,17 @@ func NewDatabase(name string, meta *MetaDBSource) (*B2Database, error) {
 		log.Fatalf("数据库名称已经存在: %s\n", name)
 		return nil, errors.New("database name duplicated")
 	}
+	guid := xid.New()
 	db = &B2Database{
-		Database:    name,
-		TableList:   nil,
-		DatabaseID:  "UniqueID", // TODO: Global ID Generator to be called
-		RocksDbConn: nil,
-		CreateTime:  nil,
-		OpenTime:    nil,
+		Database:         name,
+		TableList:        nil,
+		DatabaseID:       guid.String(),
+		RocksDbReadConn:  nil,
+		RocksDbWriteConn: nil,
+		CreateTime:       nil,
+		OpenTime:         nil,
 	}
-	if err = meta.PutDatabase(name, db); err != nil {
+	if err = meta.PutDatabase(db); err != nil {
 		log.Fatalf("创建数据库时发生错误: %v\n", err)
 		return nil, err
 	}
@@ -70,17 +76,22 @@ func NewDatabaseAndOpen(name string, meta *MetaDBSource) (*B2Database, error) {
 // OpenConnection 打开B2DB数据库连接
 func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	opts := rdb.NewDefaultOptions()
+	topts := rdb.NewDefaultTransactionDBOptions()
 	if b2db.CreateTime == nil {
 		opts.SetCreateIfMissing(true)
 		opts.SetErrorIfExists(true)
 	}
-	rocks, err := rdb.OpenDb(opts, b2db.DatabaseID)
+	write, err := rdb.OpenTransactionDb(opts, topts, b2db.DatabaseID)
 	if err != nil {
 		log.Fatalf("打开数据库连接时发生错误: %v\n", err)
 		return nil, err
 	}
+	opts.SetCreateIfMissing(false)
+	opts.SetErrorIfExists(false)
+	read, err := rdb.OpenDbForReadOnly(opts, b2db.DatabaseID, false)
 	nt := time.Now()
-	b2db.RocksDbConn = rocks
+	b2db.RocksDbReadConn = read
+	b2db.RocksDbWriteConn = write
 	b2db.CreateTime = &nt
 	b2db.OpenTime = &nt
 	return b2db, nil
@@ -95,7 +106,8 @@ func DropDatabase(name string, meta *MetaDBSource) error {
 		log.Fatalf("找不到要删除的数据库: %s\n", name)
 		return err
 	}
-	b2db.RocksDbConn.Close()
+	b2db.RocksDbReadConn.Close()
+	b2db.RocksDbWriteConn.Close()
 	opts := rdb.NewDefaultOptions()
 	if err = rdb.DestroyDb(b2db.DatabaseID, opts); err != nil {
 		log.Fatalf("删除数据库文件时发生错误: %v\n", err)
@@ -105,5 +117,50 @@ func DropDatabase(name string, meta *MetaDBSource) error {
 		log.Fatalf("删除数据库META记录时发生错误，数据一致性可能已经破坏: %v\n", err)
 		return err
 	}
+	return nil
+}
+
+// GetTable 在元数据中获取某个数据库表META内容
+func (b2db *B2Database) GetTable(tableName string, meta *MetaDBSource) (*B2Table, error) {
+	return meta.getTable(b2db.Database, tableName)
+}
+
+// AddTable 在数据库中添加表
+func (b2db *B2Database) AddTable(table *B2Table, meta *MetaDBSource) error {
+	wopts := rdb.NewDefaultWriteOptions()
+	topts := rdb.NewDefaultTransactionOptions()
+	meta.Mu.Lock()
+	defer meta.Mu.Unlock()
+	txn := meta.rocksDB.TransactionBegin(wopts, topts, nil)
+	key := []byte(b2db.Database + "/" + table.TableName)
+	value, err := json.Marshal(table)
+	if err != nil {
+		log.Fatalf("将表 %s META数据转换为json时发生错误: %v\n", table.TableName, err)
+		return err
+	}
+	err = txn.Put(key, value)
+	if err != nil {
+		log.Fatalf("在数据库 %s 中创建表 %s 时发生错误: %v\n", b2db.Database, table.TableName, err)
+		txn.Rollback()
+		return err
+	}
+	b2db.TableList = append(b2db.TableList, table)
+	key = []byte(b2db.Database)
+	value, err = json.Marshal(b2db)
+	if err != nil {
+		log.Fatalf("将数据库 %s META数据转换为json时发生错误: %v\n", b2db.Database, err)
+		return err
+	}
+	if err = txn.Put(key, value); err != nil {
+		log.Fatalf("更新数据库 %s 的META时出错: %v\n", b2db.Database, err)
+		txn.Rollback()
+		return err
+	}
+	if err = txn.Commit(); err != nil {
+		log.Fatalf("提交事务时发生错误: %v\n", err)
+		txn.Rollback()
+		return err
+	}
+	// TODO: up broadcast meta data to global index
 	return nil
 }
