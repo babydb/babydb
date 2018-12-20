@@ -7,6 +7,8 @@ import (
 	"math"
 )
 
+// TODO: - add more unit tests
+
 // B2Column 字段结构体
 type B2Column struct {
 	// ColumnName 字段名称
