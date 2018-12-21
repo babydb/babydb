@@ -10,8 +10,6 @@ import (
 	rdb "github.com/tecbot/gorocksdb"
 )
 
-// TODO: - implement unit test
-
 // 元数据库名称常量
 const (
 	METADB = "B2META"

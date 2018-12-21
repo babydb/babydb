@@ -12,7 +12,7 @@ import (
 	rdb "github.com/tecbot/gorocksdb"
 )
 
-// TODO: - implement unit test - up broadcast to global index - grpc notify whole clusters
+// TODO: - up broadcast to global index - grpc notify whole clusters
 
 // B2Database babydb数据库结构体
 type B2Database struct {

@@ -6,8 +6,6 @@ import (
 	"github.com/rs/xid"
 )
 
-// TODO: - implement unit test
-
 // B2Table 数据库表结构体
 type B2Table struct {
 	// TableName 表名
