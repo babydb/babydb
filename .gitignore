@@ -11,4 +11,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# for MAC users
 .DS_Store
+
+# local META DB
+B2META

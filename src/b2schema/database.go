@@ -52,11 +52,21 @@ func NewDatabase(name string, meta *MetaDBSource) (*B2Database, error) {
 		RocksDbReadConn:  nil,
 		RocksDbWriteConn: nil,
 		CreateTime:       time.Now(),
+		OpenTime:         time.Now(),
 	}
 	if err = meta.PutDatabase(db); err != nil {
-		log.Fatalf("创建数据库时发生错误: %v\n", err)
+		log.Fatalf("创建数据库META时发生错误: %v\n", err)
 		return nil, err
 	}
+	opts := rdb.NewDefaultOptions()
+	opts.SetCreateIfMissing(true)
+	opts.SetErrorIfExists(true)
+	create, err := rdb.OpenDb(opts, db.DatabaseID)
+	if err != nil {
+		log.Fatalf("创建数据库文件时发生错误: %v\n", err)
+		return nil, err
+	}
+	create.Close()
 	// TODO: up broadcast meta data to global index
 	return db, nil
 }
@@ -80,10 +90,6 @@ func NewDatabaseAndOpen(name string, meta *MetaDBSource) (*B2Database, error) {
 func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	opts := rdb.NewDefaultOptions()
 	topts := rdb.NewDefaultTransactionDBOptions()
-	if b2db.CreateTime == (time.Time{}) {
-		opts.SetCreateIfMissing(true)
-		opts.SetErrorIfExists(true)
-	}
 	write, err := rdb.OpenTransactionDb(opts, topts, b2db.DatabaseID)
 	if err != nil {
 		log.Fatalf("打开数据库连接时发生错误: %v\n", err)
@@ -92,10 +98,9 @@ func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	opts.SetCreateIfMissing(false)
 	opts.SetErrorIfExists(false)
 	read, err := rdb.OpenDbForReadOnly(opts, b2db.DatabaseID, false)
-	nt := time.Now()
 	b2db.RocksDbReadConn = read
 	b2db.RocksDbWriteConn = write
-	b2db.OpenTime = nt
+	b2db.OpenTime = time.Now()
 	return b2db, nil
 }
 
@@ -108,8 +113,7 @@ func DropDatabase(name string, meta *MetaDBSource) error {
 		log.Fatalf("找不到要删除的数据库: %s\n", name)
 		return err
 	}
-	b2db.RocksDbReadConn.Close()
-	b2db.RocksDbWriteConn.Close()
+	b2db.Close()
 	opts := rdb.NewDefaultOptions()
 	if err = rdb.DestroyDb(b2db.DatabaseID, opts); err != nil {
 		log.Fatalf("删除数据库文件时发生错误: %v\n", err)
@@ -215,7 +219,12 @@ func (b2db *B2Database) RemoveTable(tableName string, meta *MetaDBSource) error 
 	return nil
 }
 
+// Close 关闭数据库连接
 func (b2db *B2Database) Close() {
-	b2db.RocksDbReadConn.Close()
-	b2db.RocksDbWriteConn.Close()
+	if b2db.RocksDbReadConn != nil {
+		b2db.RocksDbReadConn.Close()
+	}
+	if b2db.RocksDbWriteConn != nil {
+		b2db.RocksDbWriteConn.Close()
+	}
 }

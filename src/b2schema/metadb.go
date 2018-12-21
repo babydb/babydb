@@ -2,7 +2,7 @@ package b2schema
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -48,17 +48,19 @@ func OpenMetaConn() *MetaDBSource {
 func (c *MetaDBSource) GetDatabase(dbname string) (*B2Database, error) {
 	opts := rdb.NewDefaultReadOptions()
 	slice, err := c.rocksDB.Get(opts, []byte(dbname))
-	fmt.Println(string(slice.Data()))
 	if err != nil {
-		log.Printf("找不到名称为 %s 的数据库: %v\n", dbname, err)
+		log.Printf("读取名称为 %s 的数据库META时发生错误: %v\n", dbname, err)
 		return nil, err
 	}
-	db := new(B2Database)
+	if slice.Size() == 0 {
+		return nil, errors.New("database not exists")
+	}
+	db := B2Database{}
 	if err = json.Unmarshal(slice.Data(), &db); err != nil {
 		log.Printf("数据库元数据结构有错误: %v\n", err)
 		return nil, err
 	}
-	return db, nil
+	return &db, nil
 }
 
 // PutDatabase 将某个数据库PUT更新到元数据中

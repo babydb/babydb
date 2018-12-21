@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"math"
+
+	"github.com/rs/xid"
 )
 
 // TODO: - add more unit tests
@@ -19,10 +21,34 @@ type B2Column struct {
 	DataLength int `json:"DataLength,omitempty"`
 	// Indexing 是否为索引字段
 	Indexing bool `json:"Indexing,omitempty"`
-	// ColumnID 字段全局唯一ID
+	// ColumnID 字段全局唯一IDtable
 	ColumnID string `json:"ColumnID"`
 	// IndexID 索引全局唯一ID
 	IndexID string `json:"IndexID"`
+}
+
+// NewColumn 创建一个新的字段，仅包括基本字段名称和数据类型
+func NewColumn(name, dt string) *B2Column {
+	return &B2Column{
+		ColumnName: name,
+		DataType:   dt,
+		ColumnID:   xid.New().String(),
+	}
+}
+
+// Length 设置字段数据长度
+func (col *B2Column) Length(l int) *B2Column {
+	col.DataLength = l
+	return col
+}
+
+// Index 设置字段索引
+func (col *B2Column) Index(i bool) *B2Column {
+	col.Indexing = i
+	if i {
+		col.IndexID = xid.New().String()
+	}
+	return col
 }
 
 // FormatBytes 将一个值按照字段数据类型定义转换为一个字节数组值
