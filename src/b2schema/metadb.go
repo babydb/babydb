@@ -2,6 +2,7 @@ package b2schema
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ func OpenMetaConn() *MetaDBSource {
 func (c *MetaDBSource) GetDatabase(dbname string) (*B2Database, error) {
 	opts := rdb.NewDefaultReadOptions()
 	slice, err := c.rocksDB.Get(opts, []byte(dbname))
+	fmt.Println(string(slice.Data()))
 	if err != nil {
 		log.Printf("找不到名称为 %s 的数据库: %v\n", dbname, err)
 		return nil, err
@@ -117,4 +119,9 @@ func (c *MetaDBSource) putTable(dbname string, table *B2Table) error {
 		return err
 	}
 	return nil
+}
+
+// Close 关闭META数据库连接
+func (c *MetaDBSource) Close() {
+	c.rocksDB.Close()
 }

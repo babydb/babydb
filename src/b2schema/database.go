@@ -27,9 +27,9 @@ type B2Database struct {
 	// rocksdb事务连接结构体
 	RocksDbWriteConn *rdb.TransactionDB `json:"-"`
 	// 创建时间
-	CreateTime *time.Time `json:"CreateTime,omitempty"`
+	CreateTime time.Time `json:"CreateTime,omitempty"`
 	// 打开时间
-	OpenTime *time.Time `json:"OpenTime,omitempty"`
+	OpenTime time.Time `json:"OpenTime,omitempty"`
 }
 
 // NewDatabase 创建一个新的数据库
@@ -51,8 +51,7 @@ func NewDatabase(name string, meta *MetaDBSource) (*B2Database, error) {
 		DatabaseID:       guid.String(),
 		RocksDbReadConn:  nil,
 		RocksDbWriteConn: nil,
-		CreateTime:       nil,
-		OpenTime:         nil,
+		CreateTime:       time.Now(),
 	}
 	if err = meta.PutDatabase(db); err != nil {
 		log.Fatalf("创建数据库时发生错误: %v\n", err)
@@ -81,7 +80,7 @@ func NewDatabaseAndOpen(name string, meta *MetaDBSource) (*B2Database, error) {
 func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	opts := rdb.NewDefaultOptions()
 	topts := rdb.NewDefaultTransactionDBOptions()
-	if b2db.CreateTime == nil {
+	if b2db.CreateTime == (time.Time{}) {
 		opts.SetCreateIfMissing(true)
 		opts.SetErrorIfExists(true)
 	}
@@ -96,8 +95,7 @@ func (b2db *B2Database) OpenConnection() (*B2Database, error) {
 	nt := time.Now()
 	b2db.RocksDbReadConn = read
 	b2db.RocksDbWriteConn = write
-	b2db.CreateTime = &nt
-	b2db.OpenTime = &nt
+	b2db.OpenTime = nt
 	return b2db, nil
 }
 
@@ -215,4 +213,9 @@ func (b2db *B2Database) RemoveTable(tableName string, meta *MetaDBSource) error 
 	_ = txn.Commit()
 	// TODO: up broadcast meta data to global index
 	return nil
+}
+
+func (b2db *B2Database) Close() {
+	b2db.RocksDbReadConn.Close()
+	b2db.RocksDbWriteConn.Close()
 }
