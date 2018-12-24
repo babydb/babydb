@@ -15,7 +15,7 @@ func (id IDIndex) Less(item btree.Item) bool {
 // NormalIndex 普通字段索引类型
 type NormalIndex struct {
 	Value interface{}
-	UID   string
+	UID   []string
 }
 
 // Less NormalIndex实现btree Item接口
@@ -52,4 +52,17 @@ func byteLess(a, b []byte) bool {
 		return true
 	}
 	return false
+}
+
+// IDIndice row key ID的索引map
+var IDIndice = make(map[string]*btree.BTree, 10)
+
+// NormalIndice 普通字段的索引map
+var NormalIndice = make(map[string]*btree.BTree, 10)
+
+// InsertOpIndexing 插入数据时更新ID字段索引
+func (id IDIndex) InsertOpIndexing(tableID string) {
+	if IDIndice[tableID] == nil {
+		IDIndice[tableID] = btree.New(8)
+	}
 }
