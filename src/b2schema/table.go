@@ -1,9 +1,12 @@
 package b2schema
 
 import (
+	"errors"
+	"log"
 	"time"
 
 	"github.com/rs/xid"
+	rdb "github.com/tecbot/gorocksdb"
 )
 
 // B2Table 数据库表结构体
@@ -42,4 +45,42 @@ func (t *B2Table) validate() bool {
 		}
 	}
 	return true
+}
+
+// InsertByValues 向表中插入一行数据
+func (t *B2Table) InsertByValues(db *B2Database, values ...interface{}) (string, error) {
+	rowKey := xid.New().String()
+	wopts := rdb.NewDefaultWriteOptions()
+	topts := rdb.NewDefaultTransactionOptions()
+	txn := db.RocksDbWriteConn.TransactionBegin(wopts, topts, nil)
+	if len(t.Columns) != len(values) {
+		log.Printf("表字段个数与值个数不相符，字段数: %d，值个数: %d\n", len(t.Columns), len(values))
+		return "", errors.New("fields and values mismatch")
+	}
+	for i, col := range t.Columns {
+		colValue, err := col.FormatBytes(values[i])
+		if err != nil {
+			log.Printf("字段定义与值类型转换出错: %v\n", err)
+			txn.Rollback()
+			return "", err
+		}
+		k := rowKey + "/" + col.ColumnID
+		err = writeKV([]byte(k), colValue, txn)
+		if err != nil {
+			log.Printf("写入字段数据库时发生错误: %v\n", err)
+			_ = txn.Rollback()
+			return "", err
+		}
+	}
+	err := txn.Commit()
+	if err != nil {
+		log.Printf("提交事务时发生错误: %v\n", err)
+		_ = txn.Rollback()
+		return "", err
+	}
+	return rowKey, nil
+}
+
+func writeKV(key, value []byte, txn *rdb.Transaction) error {
+	return txn.Put(key, value)
 }

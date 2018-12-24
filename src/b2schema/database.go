@@ -6,10 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/thoas/go-funk"
-
 	"github.com/rs/xid"
 	rdb "github.com/tecbot/gorocksdb"
+	"github.com/thoas/go-funk"
 )
 
 // TODO: - up broadcast to global index - grpc notify whole clusters
