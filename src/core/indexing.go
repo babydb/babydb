@@ -5,11 +5,11 @@ import (
 )
 
 // IDIndex ID字段索引类型
-type IDIndex string
+type IDIndex []byte
 
 // Less IDIndex实现btree Item接口
 func (id IDIndex) Less(item btree.Item) bool {
-	return id < item.(IDIndex)
+	return byteLess(id, item.(IDIndex))
 }
 
 // NormalIndex 普通字段索引类型
@@ -62,7 +62,24 @@ var NormalIndice = make(map[string]*btree.BTree, 10)
 
 // InsertOpIndexing 插入数据时更新ID字段索引
 func (id IDIndex) InsertOpIndexing(tableID string) {
-	if IDIndice[tableID] == nil {
-		IDIndice[tableID] = btree.New(8)
+	tree := IDIndice[tableID]
+	if tree == nil {
+		tree = btree.New(8)
+	}
+	tree.ReplaceOrInsert(id)
+	IDIndice[tableID] = tree
+}
+
+// InsertOpIndexing 插入数据时更新普通字段索引
+func (a NormalIndex) InsertOpIndexing(indexID string) {
+	tree := NormalIndice[indexID]
+	if tree == nil {
+		tree = btree.New(8)
+	}
+	if item := tree.Get(a); item != nil {
+		node := item.(*NormalIndex)
+		node.UID = append(node.UID, a.UID...)
+	} else {
+		tree.ReplaceOrInsert(a)
 	}
 }
