@@ -74,7 +74,7 @@ func (id IDIndex) InsertOpIndexing(tableID string) {
 func (a NormalIndex) InsertOpIndexing(indexID string) {
 	tree := NormalIndice[indexID]
 	if tree == nil {
-		tree = btree.New(8)
+		tree = btree.New(16)
 	}
 	if item := tree.Get(a); item != nil {
 		node := item.(*NormalIndex)
@@ -82,4 +82,20 @@ func (a NormalIndex) InsertOpIndexing(indexID string) {
 	} else {
 		tree.ReplaceOrInsert(a)
 	}
+}
+
+// DeleteOpIndexing 删除数据时更新ID字段索引
+func (id IDIndex) DeleteOpIndexing(tableID string) {
+	if IDIndice[tableID] == nil {
+		return
+	}
+	IDIndice[tableID].Delete(id)
+}
+
+// DeleteOpIndexing 删除数据时跟新普通字段索引
+func (a NormalIndex) DeleteOpIndexing(indexID string) {
+	if NormalIndice[indexID] == nil {
+		return
+	}
+	NormalIndice[indexID].Delete(a)
 }

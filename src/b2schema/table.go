@@ -52,11 +52,11 @@ func (t *B2Table) InsertByValues(db *B2Database, values ...interface{}) (string,
 	rowKey := xid.New().String()
 	wopts := rdb.NewDefaultWriteOptions()
 	topts := rdb.NewDefaultTransactionOptions()
-	txn := db.RocksDbWriteConn.TransactionBegin(wopts, topts, nil)
 	if len(t.Columns) != len(values) {
 		log.Printf("表字段个数与值个数不相符，字段数: %d，值个数: %d\n", len(t.Columns), len(values))
 		return "", errors.New("fields and values mismatch")
 	}
+	txn := db.RocksDbWriteConn.TransactionBegin(wopts, topts, nil)
 	for i, col := range t.Columns {
 		colValue, err := col.FormatBytes(values[i])
 		if err != nil {
@@ -67,10 +67,50 @@ func (t *B2Table) InsertByValues(db *B2Database, values ...interface{}) (string,
 		k := rowKey + "/" + col.ColumnID
 		err = writeKV([]byte(k), colValue, txn)
 		if err != nil {
-			log.Printf("写入字段数据库时发生错误: %v\n", err)
+			log.Printf("写入字段数据时发生错误: %v\n", err)
 			_ = txn.Rollback()
 			return "", err
 		}
+	}
+	err := txn.Commit()
+	if err != nil {
+		log.Printf("提交事务时发生错误: %v\n", err)
+		_ = txn.Rollback()
+		return "", err
+	}
+	return rowKey, nil
+}
+
+// InsertByMap 使用KV对向表中插入一行数据
+func (t *B2Table) InsertByMap(db *B2Database, values map[string]interface{}) (string, error) {
+	rowKey := xid.New().String()
+	wopts := rdb.NewDefaultWriteOptions()
+	topts := rdb.NewDefaultTransactionOptions()
+	if len(values) > len(t.Columns) {
+		log.Printf("数据个数与字段个数不符，values: %d，columns: %d\n", len(values), len(t.Columns))
+		return "", errors.New("values more than fields")
+	}
+	txn := db.RocksDbWriteConn.TransactionBegin(wopts, topts, nil)
+	for _, col := range t.Columns {
+		if _, ok := values[col.ColumnName]; ok {
+			colValue, err := col.FormatBytes(values[col.ColumnName])
+			if err != nil {
+				log.Printf("字段定义与值类型转换出错: %v\n", err)
+				_ = txn.Rollback()
+				return "", err
+			}
+			if err = writeKV([]byte(col.ColumnName), colValue, txn); err != nil {
+				log.Printf("写入字段数据时发生错误: %v\n", err)
+				_ = txn.Rollback()
+				return "", err
+			}
+			delete(values, col.ColumnName)
+		}
+	}
+	if len(values) > 0 {
+		log.Println("数据值中存在与字段定义名称不符的部分")
+		txn.Rollback()
+		return "", errors.New("values map and columns definition mismatched")
 	}
 	err := txn.Commit()
 	if err != nil {
