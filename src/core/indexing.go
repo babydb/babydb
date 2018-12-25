@@ -64,7 +64,7 @@ var NormalIndice = make(map[string]*btree.BTree, 10)
 func (id IDIndex) InsertOpIndexing(tableID string) {
 	tree := IDIndice[tableID]
 	if tree == nil {
-		tree = btree.New(8)
+		tree = btree.New(64)
 	}
 	tree.ReplaceOrInsert(id)
 	IDIndice[tableID] = tree
