@@ -15,11 +15,11 @@ func TestIDIndexing(t *testing.T) {
 		a.InsertOpIndexing("testTable")
 	}
 	// var b bytes.Buffer
-	// IDIndice["testTable"].Ascend(traverse(&b))
+	// IDIndice["testTable"].Ascend(tTraverse(&b))
 	// fmt.Println(b.String())
 }
 
-func traverse(buf *bytes.Buffer) btree.ItemIterator {
+func tTraverse(buf *bytes.Buffer) btree.ItemIterator {
 	return func(i btree.Item) bool {
 		buf.WriteString(string(i.(IDIndex)))
 		return true

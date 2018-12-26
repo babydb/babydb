@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bytes"
+
 	"github.com/google/btree"
 )
 
@@ -98,4 +100,21 @@ func (a NormalIndex) DeleteOpIndexing(indexID string) {
 		return
 	}
 	NormalIndice[indexID].Delete(a)
+}
+
+func (id IDIndex) Serialize(tableID string) []byte {
+	tree, ok := IDIndice[tableID]
+	if !ok {
+		return nil
+	}
+	var buf bytes.Buffer
+	tree.Ascend(traverse(&buf))
+	return buf.Bytes()
+}
+
+func traverse(buf *bytes.Buffer) btree.ItemIterator {
+	return func(i btree.Item) bool {
+		buf.Write(i.(IDIndex))
+		return true
+	}
 }
