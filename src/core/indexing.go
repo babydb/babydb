@@ -102,6 +102,7 @@ func (a NormalIndex) DeleteOpIndexing(indexID string) {
 	NormalIndice[indexID].Delete(a)
 }
 
+// Serialize 将ID索引的Btree序列化为byte数组
 func (id IDIndex) Serialize(tableID string) []byte {
 	tree, ok := IDIndice[tableID]
 	if !ok {
