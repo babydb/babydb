@@ -16,3 +16,7 @@
 
 # local META DB
 B2META
+
+# IDEA users
+.idea
+*.iml

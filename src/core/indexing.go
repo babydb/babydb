@@ -112,6 +112,8 @@ func (id IDIndex) Serialize(tableID string) []byte {
 	return buf.Bytes()
 }
 
+func (id IDIndex) Deserialize(tableID string)
+
 func traverse(buf *bytes.Buffer) btree.ItemIterator {
 	return func(i btree.Item) bool {
 		buf.Write(i.(IDIndex))
