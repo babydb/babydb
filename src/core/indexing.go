@@ -20,6 +20,14 @@ type NormalIndex struct {
 	UID   []string
 }
 
+// Index 索引的接口
+type Index interface {
+	Less(item btree.Item) bool
+	InsertOpIndexing(ID string)
+	DeleteOpIndexing(ID string)
+	Serialize(ID string) []byte
+}
+
 // Less NormalIndex实现btree Item接口
 func (a NormalIndex) Less(b btree.Item) bool {
 	bi := b.(NormalIndex)
@@ -102,6 +110,7 @@ func (a NormalIndex) DeleteOpIndexing(indexID string) {
 	NormalIndice[indexID].Delete(a)
 }
 
+// Serialize 将ID索引的Btree序列化为byte数组
 func (id IDIndex) Serialize(tableID string) []byte {
 	tree, ok := IDIndice[tableID]
 	if !ok {
@@ -109,7 +118,22 @@ func (id IDIndex) Serialize(tableID string) []byte {
 	}
 	var buf bytes.Buffer
 	tree.Ascend(traverse(&buf))
-	return buf.Bytes()
+	treeBytes := make([]byte, buf.Len())
+	buf.Read(treeBytes)
+	return treeBytes
+}
+
+// Serialize 将普通字段索引的Btree序列化为byte数组
+func (a NormalIndex) Serialize(indexID string) []byte {
+	tree, ok := NormalIndice[indexID]
+	if !ok {
+		return nil
+	}
+	var buf bytes.Buffer
+	tree.Ascend(traverse(&buf))
+	treeBytes := make([]byte, buf.Len())
+	buf.Read(treeBytes)
+	return treeBytes
 }
 
 func (id IDIndex) Deserialize(tableID string)
