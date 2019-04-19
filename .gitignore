@@ -20,3 +20,6 @@ B2META
 # IDEA users
 .idea
 *.iml
+
+# No dependencies
+vendor
