@@ -177,42 +177,50 @@ func (col *B2Column) ParseString(value []byte) (string, bool) {
 
 // 下面是一些二进制转换工具函数
 
-func int32ToBytes(i int32) []byte {
+// Int32ToBytes 将一个int32值转换为字节数组
+func Int32ToBytes(i int32) []byte {
 	bs := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bs, uint32(i))
 	return bs
 }
 
-func bytesToInt32(bs []byte) int32 {
+// BytesToInt32 将一个字节数组转换为int32值
+func BytesToInt32(bs []byte) int32 {
 	return int32(binary.LittleEndian.Uint32(bs))
 }
 
-func int64ToBytes(i int64) []byte {
+// Int64ToBytes 将一个int64值转换为字节数组
+func Int64ToBytes(i int64) []byte {
 	bs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bs, uint64(i))
 	return bs
 }
 
-func bytesToInt64(bs []byte) int64 {
+// BytesToInt64 将一个字节数组转换为int64值
+func BytesToInt64(bs []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(bs))
 }
 
-func float32ToBytes(f float32) []byte {
+// Float32ToBytes 将一个float32值转换为字节数组
+func Float32ToBytes(f float32) []byte {
 	bs := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bs, math.Float32bits(f))
 	return bs
 }
 
-func bytesToFloat32(bs []byte) float32 {
+// BytesToFloat32 将一个字节数组转换为float32值
+func BytesToFloat32(bs []byte) float32 {
 	return math.Float32frombits(binary.LittleEndian.Uint32(bs))
 }
 
-func float64ToBytes(f float64) []byte {
+// Float64ToBytes 将一个float64值转换为字节数组
+func Float64ToBytes(f float64) []byte {
 	bs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bs, math.Float64bits(f))
 	return bs
 }
 
-func bytesToFloat64(bs []byte) float64 {
+// BytesToFloat64 将一个字节数组转换为字节数组
+func BytesToFloat64(bs []byte) float64 {
 	return math.Float64frombits(binary.LittleEndian.Uint64(bs))
 }

@@ -11,11 +11,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
+  digest = "1:89da0f0574bc94cfd0ac8b59af67bf76cdd110d503df2721006b9f0492394333"
   name = "github.com/petar/GoLLRB"
   packages = ["llrb"]
   pruneopts = "UT"
-  revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
+  revision = "33fb24c13b99c46c93183c291836c573ac382536"
 
 [[projects]]
   digest = "1:2e76a73cb51f42d63a2a1a85b3dc5731fd4faf6821b434bd0ef2c099186031d6"
@@ -27,11 +27,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1e38f591bdbaa29feb1ae8f05822307ff1f36c5a06f439477c424b1c749db5ed"
+  digest = "1:5975e74ce1d29fb5ae2335cd95500a5b9a0492d6a05584a4623467130959d72c"
   name = "github.com/tecbot/gorocksdb"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8752a943348155073ae407010e2b75c40480271a"
+  revision = "025c3cf4ffb46a5c7c987cb28f44eb5073ef2a80"
 
 [[projects]]
   digest = "1:68a7cb5028bb8bd8efa388a7eaee577f2535c99209df851afb4b49c102316cf2"

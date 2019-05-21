@@ -2,8 +2,10 @@ package core
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/google/btree"
+	schema "github.com/babydb/babydb/b2schema"
 )
 
 // IDIndex ID字段索引类型
@@ -72,8 +74,8 @@ var NormalIndice = make(map[string]*btree.BTree, 10)
 
 // InsertOpIndexing 插入数据时更新ID字段索引
 func (id IDIndex) InsertOpIndexing(tableID string) {
-	tree := IDIndice[tableID]
-	if tree == nil {
+	tree, ok := IDIndice[tableID]
+	if !ok {
 		tree = btree.New(64)
 	}
 	tree.ReplaceOrInsert(id)
@@ -82,9 +84,9 @@ func (id IDIndex) InsertOpIndexing(tableID string) {
 
 // InsertOpIndexing 插入数据时更新普通字段索引
 func (a NormalIndex) InsertOpIndexing(indexID string) {
-	tree := NormalIndice[indexID]
-	if tree == nil {
-		tree = btree.New(16)
+	tree, ok := NormalIndice[indexID]
+	if !ok {
+		tree = btree.New(64)
 	}
 	if item := tree.Get(a); item != nil {
 		node := item.(*NormalIndex)
@@ -111,36 +113,66 @@ func (a NormalIndex) DeleteOpIndexing(indexID string) {
 }
 
 // Serialize 将ID索引的Btree序列化为byte数组
-func (id IDIndex) Serialize(tableID string) []byte {
+func (id IDIndex) Serialize(tableID string) ([]byte, error) {
 	tree, ok := IDIndice[tableID]
 	if !ok {
-		return nil
+		return nil, errors.New("table ID not found")
 	}
 	var buf bytes.Buffer
-	tree.Ascend(traverse(&buf))
+	tree.Ascend(idTraverse(&buf))
 	treeBytes := make([]byte, buf.Len())
 	buf.Read(treeBytes)
-	return treeBytes
+	return treeBytes, nil
 }
 
 // Serialize 将普通字段索引的Btree序列化为byte数组
-func (a NormalIndex) Serialize(indexID string) []byte {
+func (a NormalIndex) Serialize(indexID string) ([]byte, error) {
 	tree, ok := NormalIndice[indexID]
 	if !ok {
-		return nil
+		return nil, errors.New("index ID not found")
 	}
 	var buf bytes.Buffer
-	tree.Ascend(traverse(&buf))
+	tree.Ascend(idTraverse(&buf))
 	treeBytes := make([]byte, buf.Len())
 	buf.Read(treeBytes)
-	return treeBytes
+	return treeBytes, nil
 }
 
-func (id IDIndex) Deserialize(tableID string)
+func Deserialize(treeBytes []byte) (*btree.BTree, error) {
+	if len(treeBytes) == 0 {
+		return nil, errors.New("empty bytes to deserialize")
+	}
+	tree := btree.New(64)
+	p := 0
+	for i := 0; i < len(treeBytes); {
+		if treeBytes[i] == 0 && treeBytes[i+1] == 0 {
+			var id IDIndex = treeBytes[p:i]
+			tree.ReplaceOrInsert(id)
+			i += 2
+			p = i
+			continue
+		}
+		i++
+	}
+	return tree, nil
+}
 
-func traverse(buf *bytes.Buffer) btree.ItemIterator {
+func idTraverse(buf *bytes.Buffer) btree.ItemIterator {
 	return func(i btree.Item) bool {
 		buf.Write(i.(IDIndex))
+		buf.Write([]byte{0, 0})
 		return true
+	}
+}
+
+func normalTraverse(buf *bytes.Buffer) btree.ItemIterator {
+	return func(i btree.Item) bool {
+		data, ok := i.(NormalIndex)
+		if !ok {
+			log.Fatalf("节点不是普通索引，btree类型错误。")
+			return false
+		}
+		schema.
+		buf.Write(data.Value)
 	}
 }
